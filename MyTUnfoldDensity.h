@@ -121,22 +121,57 @@ void makeJacobian2D( TH2 const & v, TMatrixD & Jac){
   for ( unsigned int i = 0; i <=  v.GetNbinsX() + 1; ++i ){
       for ( unsigned int j = 0; j <= v.GetNbinsY() + 1; ++j ) {          
           // flattened index for v rows
-          auto index_1 = j * (v.GetNbinsX()+1) + i;
-          auto N = v.Integral(0, v.GetNbinsX()+1, j, j+1);
+          auto index_1 = j * (v.GetNbinsX()+2) + i;
+          auto N = v.Integral(0, v.GetNbinsX()+1, j, j);
           if ( N > 0.0 ){
               for ( unsigned int k = 0; k <= v.GetNbinsX() + 1; ++k ){
                   for ( unsigned int l = 0; l <= v.GetNbinsY() + 1; ++l ){
-                      // flattened index for v columns
-                      auto index_2 = l * (v.GetNbinsX() + 1) + k; 
+                      // flattened index for v columns 
+                      auto index_2 = l * (v.GetNbinsX() + 2) + k;
 
                       // The entire matrix is block diagonal. 
 
-                      // for diagonal rows within the blocks. 
+                      // for diagonal elements within the blocks. 
                       if ( index_1 == index_2 )
-                        Jac[index_1][index_2] = (N - v.GetBinContent(i)) / N / N;
-                      // for off-diagonal rows within the blocks. 
+                        Jac[index_1][index_2] = (N - v.GetBinContent(i,j)) / N / N;
+                      // for off-diagonal elements within the blocks. 
+                      else if (l==j)
+                        Jac[index_1][index_2] = -v.GetBinContent(i,j) / N / N;
+                      //for off-diagonal elements outside of the blocks.
                       else
-                        Jac[index_1][index_2] = -v.GetBinContent(i) / N / N;
+                           Jac[index_1][index_2] = 0;
+                  }
+              }
+          }
+    }
+  }
+}
+
+
+void makeJacobian2Dfrom1D( int const n_x, int const n_y, TH1 const & v, TMatrixD & Jac){  
+  for ( unsigned int i = 0; i <=  n_x +1; ++i ){
+      for ( unsigned int j = 0; j <= n_y +1; ++j ) {          
+          // flattened index for v rows
+          auto counter = j * (n_x+2);
+          auto index_1 = counter + i;
+          auto N = v.Integral(counter, n_x+counter+1);
+          if ( N > 0.0 ){
+              for ( unsigned int k = 0; k <= n_x + 1; ++k ){
+                  for ( unsigned int l = 0; l <= n_y + 1; ++l ){
+                      // flattened index for v columns
+                      auto index_2 = l * (n_x + 2) + k; 
+
+                      // The entire matrix is block diagonal. 
+
+                      // for diagonal elements within the blocks. 
+                      if ( index_1 == index_2 )
+                        Jac[index_1][index_2] = (N - v.GetBinContent(i+counter)) / N / N;
+                      // for off-diagonal elements within the blocks. 
+                      else if (l==j)
+                          Jac[index_1][index_2] = -v.GetBinContent(i+counter) / N / N;
+                      //for off-diagonals outside of the blocks.
+                      else
+                        Jac[index_1][index_2] = 0;
                   }
               }
           }
